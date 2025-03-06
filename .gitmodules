@@ -1,0 +1,6 @@
+[submodule "customer-person"]
+	path = customer-person
+	url = https://github.com/Joel-x-x/customer-person.git
+[submodule "transaction-account"]
+	path = transaction-account
+	url = https://github.com/Joel-x-x/transaction-account.git
