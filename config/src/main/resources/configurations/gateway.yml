@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: customer-person
+          uri: 'http://customer-person-service:8081'
+          predicates:
+            - Path=/api/v1/customers/**
+        - id: transaction-account
+          uri: 'http://transaction-account-service:8082'
+          predicates:
+            - Path=/api/v1/accounts/**
+            - Path=/api/v1/transactions/**
+            - Path=/api/v1/account-types/**
+            - Path=/api/v1/transaction-types/**
+            - Path=/api/v1/reports/**
+
+eureka:
+  client:
+    register-with-eureka: false
