@@ -1,74 +1,102 @@
-version: '3'
 services:
   # Customer Person Service
   customer-person-service:
     build:
-      context: ./customer-person-service
+      context: ./customer-person/customer-person
     ports:
       - "8081:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/banking
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db1:3308/customer_person
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:9092
     depends_on:
-      - db
+      - db1
       - kafka
+  
+  # MySQL Database
+  db1:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=customer_person
+    ports:
+      - "3308:3306"
 
   # Transaction Account Service
   transaction-account-service:
     build:
-      context: ./transaction-account-service
+      context: ./transaction-account/transaction-account
     ports:
       - "8082:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/banking
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db2:3307/transaction_account
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=
       - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:9092
     depends_on:
-      - db
+      - db2
       - kafka
 
   # MySQL Database
-  db:
+  db2:
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword
-      - MYSQL_DATABASE=banking
+      - MYSQL_DATABASE=transaction_account
     ports:
-      - "3306:3306"
+      - "3307:3306"
 
   # Zookeeper
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: zookeeper:3.8
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
     ports:
       - "2181:2181"
 
   # Kafka Broker
-kafka:
-  image: confluentinc/cp-kafka:latest
-  depends_on:
-    - zookeeper
-  environment:
-    KAFKA_BROKER_ID: 1
-    KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-    KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9093,EXTERNAL://localhost:9092
-    KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-    KAFKA_LISTENER_NAME_INTERNAL: INSIDE
-    KAFKA_LISTENER_INTERNAL: INSIDE://0.0.0.0:9093
-    KAFKA_LISTENERS: INSIDE://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
-    KAFKA_LISTENER_NAME_EXTERNAL: EXTERNAL
-    KAFKA_LISTENER_EXTERNAL: EXTERNAL://0.0.0.0:9092
-  ports:
-    - "9092:9092"  # Externally exposed port for external connections
-    - "9093:9093"
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9093,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_LISTENER_NAME_INTERNAL: INSIDE
+      KAFKA_LISTENER_INTERNAL: INSIDE://0.0.0.0:9093
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_LISTENER_NAME_EXTERNAL: EXTERNAL
+      KAFKA_LISTENER_EXTERNAL: EXTERNAL://0.0.0.0:9092
+    ports:
+      - "9092:9092"  # Externally exposed port for external connections
+      - "9093:9093"
 
+# API Gateway
+  api-gateway:
+    build:
+      context: ./gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+      - customer-person-service
+      - transaction-account-service
+
+  # Config Server
+  config-server:
+    build:
+      context: ./config
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka-server
   # Eureka Server
   eureka-server:
-    image: eureka-server-image
+    build:
+      context: ./gateway
     ports:
       - "8761:8761"
     environment:
@@ -78,4 +106,4 @@ kafka:
       - eureka.server.enable-self-preservation=false
     depends_on:
       - kafka
-      - db
+      - db1
